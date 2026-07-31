@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>I Love You The Most</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at center, #1b0a2a 0%, #07030d 100%);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: Georgia, 'Times New Roman', serif;
+  }
+
+  .scene {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 1.8s ease;
+  }
+
+  .scene.fading {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .stage {
+    position: relative;
+    width: 500px;
+    height: 500px;
+  }
+
+  .bloom-wrap {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 380px;
+    height: 380px;
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+    transition: transform 2s ease-in, opacity 2s ease-in;
+  }
+
+  .bloom-wrap.bloomed {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+
+  .flower {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+
+  .flower.spin {
+    animation: spin 24s linear infinite;
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+
+  .petal-layer {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+  }
+
+  .petal {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100px;
+    height: 170px;
+    background: radial-gradient(circle at 50% 90%, #ff8fb1, #ff3d77 70%, #d81159);
+    border-radius: 50% 50% 0 0 / 60% 60% 0 0;
+    transform-origin: 50% 100%;
+    box-shadow: 0 0 20px rgba(255, 61, 119, 0.6);
+    opacity: 0.95;
+  }
+
+  .center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 90px;
+    height: 90px;
+    margin: -45px 0 0 -45px;
+    border-radius: 50%;
+    background: white;
+    z-index: 5;
+  }
+
+  .dots {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #b5651d;
+    opacity: 0.7;
+  }
+
+  .blur {
+    position: absolute;
+    top: 0; left: 0; bottom: 0; right: 0;
+    backdrop-filter: blur(25px);
+    z-index: 1;
+  }
+
+  /* Poem text lines */
+  .poem {
+    position: absolute;
+    z-index: 10;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 700px;
+    text-align: center;
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .poem .line {
+    font-size: clamp(14px, 2.4vw, 22px);
+    letter-spacing: 0.5px;
+    line-height: 1.5;
+    opacity: 0;
+    transform: translateY(14px);
+    transition: opacity 1.4s ease-in, transform 1.4s ease-in;
+    text-shadow: 0 0 12px rgba(255,255,255,0.25);
+  }
+
+  .poem .line.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .poem .line.cause {
+    font-size: clamp(16px, 3vw, 26px);
+    letter-spacing: 3px;
+    margin-top: 6px;
+  }
+
+  .click-hint {
+    position: absolute;
+    bottom: 6%;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    color: #ffffff;
+    font-size: 13px;
+    letter-spacing: 2px;
+    opacity: 0;
+    transition: opacity 1.5s ease;
+    text-transform: uppercase;
+    pointer-events: none;
+  }
+
+  .click-hint.show {
+    animation: pulseHint 2.2s ease-in-out infinite;
+  }
+
+  @keyframes pulseHint {
+    0%, 100% { opacity: 0.35; }
+    50% { opacity: 0.75; }
+  }
+
+  /* Final dramatic screen */
+  .final {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at center, #1b0a2a 0%, #07030d 100%);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 2s ease;
+    z-index: 100;
+  }
+
+  .final.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .final-text {
+    color: #ffffff;
+    font-size: clamp(22px, 6vw, 64px);
+    letter-spacing: 3px;
+    text-shadow: 0 0 25px rgba(255,255,255,0.5);
+    max-width: 92vw;
+    text-align: center;
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  .final-text .cursor {
+    display: inline-block;
+    margin-left: 2px;
+    animation: blink 0.8s step-end infinite;
+  }
+
+  @keyframes blink {
+    50% { opacity: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="scene" id="scene">
+  <div class="stage">
+    <div class="blur"></div>
+    <div class="bloom-wrap" id="bloomWrap">
+      <div class="flower" id="flower">
+        <div class="petal-layer" id="ring"></div>
+        <div class="center"></div>
+      </div>
+    </div>
+
+    <div class="poem" id="poem">
+      <div class="line">THE LIFE FEELS EMPTY WITHOUT YOU,</div>
+      <div class="line">THE LIFE IS INCOMPLETE WITHOUT YOU</div>
+      <div class="line">THE LIFE'S STORY WON'T END WITHOUT YOU</div>
+      <div class="line">LIFE MIGHT BETRAY ME, BUT I WON'T&nbsp;&mdash; WITH YOU, THAT'S HOW MUCH SPECIAL YOU ARE TO ME</div>
+      <div class="line">I WILL TAKE CARE OF YOU, I WILL REMEMBER, I WILL CARE, I WILL GIVE KISSES AND BE THERE WHEN YOU NEED.</div>
+      <div class="line cause">CAUSE&hellip;</div>
+    </div>
+  </div>
+
+  <div class="click-hint" id="clickHint">tap anywhere</div>
+</div>
+
+<div class="final" id="final">
+  <div class="final-text" id="finalText"></div>
+</div>
+
+<script>
+  function buildRing(containerId, count) {
+    const container = document.getElementById(containerId);
+    for (let i = 0; i < count; i++) {
+      const angle = (360 / count) * i;
+      const petal = document.createElement('div');
+      petal.className = 'petal';
+      petal.style.transform = `translate(-50%, -100%) rotate(${angle}deg)`;
+      container.appendChild(petal);
+    }
+  }
+
+  buildRing('ring', 6);
+
+  const flowerEl = document.getElementById('flower');
+  for (let i = 0; i < 14; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'dots';
+    const a = Math.random() * Math.PI * 2;
+    const r = Math.random() * 28;
+    dot.style.left = `calc(50% + ${Math.cos(a) * r}px - 3px)`;
+    dot.style.top = `calc(50% + ${Math.sin(a) * r}px - 3px)`;
+    flowerEl.appendChild(dot);
+  }
+
+  const bloomWrap = document.getElementById('bloomWrap');
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      bloomWrap.classList.add('bloomed');
+    });
+  });
+
+  bloomWrap.addEventListener('transitionend', function onDone(e) {
+    if (e.propertyName !== 'transform') return;
+    flowerEl.classList.add('spin');
+    bloomWrap.removeEventListener('transitionend', onDone);
+    revealPoem();
+  });
+
+  let ready = false;
+  let triggered = false;
+
+  function revealPoem() {
+    const lines = document.querySelectorAll('.poem .line');
+    lines.forEach((line, i) => {
+      setTimeout(() => {
+        line.classList.add('show');
+        if (i === lines.length - 1) {
+          setTimeout(() => {
+            document.getElementById('clickHint').classList.add('show');
+            ready = true;
+          }, 1400);
+        }
+      }, i * 1100);
+    });
+  }
+
+  function typeWriter(el, text, speed) {
+    return new Promise((resolve) => {
+      let i = 0;
+      const cursor = document.createElement('span');
+      cursor.className = 'cursor';
+      cursor.textContent = '|';
+
+      function step() {
+        el.textContent = text.slice(0, i);
+        el.appendChild(cursor);
+        i++;
+        if (i <= text.length) {
+          setTimeout(step, speed);
+        } else {
+          resolve();
+        }
+      }
+      step();
+    });
+  }
+
+  document.body.addEventListener('click', () => {
+    if (!ready || triggered) return;
+    triggered = true;
+
+    const scene = document.getElementById('scene');
+    scene.classList.add('fading');
+
+    setTimeout(() => {
+      const final = document.getElementById('final');
+      final.classList.add('show');
+
+      const finalText = document.getElementById('finalText');
+      setTimeout(() => {
+        typeWriter(finalText, 'I LOVE YOU THE MOST', 90);
+      }, 300);
+    }, 1800);
+  });
+</script>
+
+</body>
+</html>
