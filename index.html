@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Girlfriend Day</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body {
+    width:100%; height:100%;
+    background:#000;
+    overflow:hidden;
+    cursor:pointer;
+  }
+
+  /* ---------- Heart layer (background) ---------- */
+  #heart-stage {
+    position:fixed; top:0; left:0;
+    width:100vw; height:100vh;
+    opacity:0;
+    transition: opacity 2.6s ease;
+    z-index:0;
+    pointer-events:none;
+  }
+  #heart-stage.visible { opacity:1; }
+  #heart-canvas { display:block; }
+
+  .blur {
+    position:fixed; top:0; left:0; right:0; bottom:0;
+    backdrop-filter:blur(15px);
+    z-index:1;
+    pointer-events:none;
+  }
+
+  #vignette {
+    position:fixed; top:0; left:0;
+    width:100vw; height:100vh;
+    pointer-events:none;
+    background: radial-gradient(ellipse at center, rgba(0,0,0,0) 40%, rgba(0,0,0,0.92) 100%);
+    z-index:2;
+  }
+
+  /* ---------- Typewriter layer ---------- */
+  #container {
+    position:fixed; top:0; left:0;
+    width:100%; height:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding:0 30px;
+    z-index:10;
+    transition: top 1.4s ease, height 1.4s ease;
+  }
+
+  #text {
+    color:#ffffff;
+    font-family:'Segoe UI', Arial, sans-serif;
+    font-size:clamp(20px, 5vw, 42px);
+    font-weight:500;
+    letter-spacing:0.5px;
+    opacity:1;
+    transition:opacity 0.8s ease;
+    max-width:900px;
+  }
+
+  #text.fade { opacity:0; }
+
+  .cursor {
+    display:inline-block;
+    width:2px;
+    background:#ffffff;
+    margin-left:3px;
+    animation: blink 0.8s steps(1) infinite;
+  }
+
+  @keyframes blink {
+    0%, 50% { opacity:1; }
+    50.01%, 100% { opacity:0; }
+  }
+
+  #hint {
+    position:fixed;
+    bottom:40px; left:0; right:0;
+    text-align:center;
+    color:#666;
+    font-family:'Segoe UI', Arial, sans-serif;
+    font-size:14px;
+    letter-spacing:1px;
+    opacity:0;
+    transition:opacity 1s ease;
+    z-index:10;
+  }
+  #hint.show { opacity:1; }
+
+  /* ---------- Final lyrics layer ---------- */
+  #lyrics-stage {
+    position:fixed; top:0; left:0;
+    width:100%; height:100vh;
+    opacity:0;
+    transition:opacity 2s ease;
+    z-index:5;
+    font-family:'Caveat', cursive;
+  }
+  #lyrics-stage.show { opacity:1; }
+
+  #lyrics-block {
+    position:absolute;
+    left:50%; top:100%;
+    transform:translate(-50%, 0);
+    width:90%;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+
+  .lyric-line {
+    text-align:center;
+    color:rgba(255,255,255,0.3);
+    font-weight:700;
+    font-size:clamp(1.4rem, 5vw, 2.6rem);
+    letter-spacing:0.01em;
+    margin-bottom:12px;
+  }
+  .lyric-line:last-child { margin-bottom:0; }
+
+  @keyframes riseUp {
+    0%   { top:100%; }
+    100% { top:-100%; }
+  }
+  #lyrics-block.play {
+    animation: riseUp 53s linear forwards;
+  }
+
+  /* ---------- Question stage (Yes/No) ---------- */
+  #question-stage {
+    position:fixed;
+    top:64%; left:0;
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding:0 30px;
+    opacity:0;
+    z-index:15;
+    pointer-events:none;
+    transition:opacity 1.4s ease;
+  }
+  #question-stage.show {
+    opacity:1;
+    pointer-events:auto;
+  }
+
+  #button-row {
+    position:relative;
+    display:flex;
+    gap:28px;
+    align-items:center;
+    justify-content:center;
+  }
+
+  #question-stage button {
+    font-family:'Segoe UI', Arial, sans-serif;
+    font-size:18px;
+    font-weight:600;
+    letter-spacing:0.5px;
+    padding:14px 38px;
+    border-radius:40px;
+    border:2px solid rgba(255,60,90,0.85);
+    background:rgba(255,20,50,0.12);
+    color:#fff;
+    cursor:pointer;
+    transition:transform 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
+    box-shadow:0 0 20px rgba(255,20,50,0.25);
+  }
+
+  #yes-btn:hover {
+    background:rgba(255,30,60,0.55);
+    box-shadow:0 0 30px rgba(255,30,60,0.55);
+    transform:scale(1.05);
+  }
+
+  #no-btn {
+    position:relative;
+    z-index:16;
+  }
+  #no-btn.evading {
+    position:fixed;
+    transition:top 0.35s ease, left 0.35s ease;
+  }
+
+  #no-tooltip {
+    position:fixed;
+    max-width:150px;
+    white-space:nowrap;
+    overflow:visible;
+    background:#fff;
+    color:#111;
+    font-family:'Segoe UI', Arial, sans-serif;
+    font-weight:700;
+    padding:8px 14px;
+    border-radius:10px;
+    opacity:0;
+    pointer-events:none;
+    transform:translateY(6px);
+    transition:opacity 0.3s ease, transform 0.3s ease;
+    z-index:17;
+  }
+  #no-tooltip::after {
+    content:'';
+    position:absolute;
+    bottom:-8px;
+    left:24px;
+    border-width:8px 8px 0 8px;
+    border-style:solid;
+    border-color:#fff transparent transparent transparent;
+  }
+  #no-tooltip.show {
+    opacity:1;
+    transform:translateY(0);
+  }
+
+  /* ---------- "You are mine" reveal stage ---------- */
+  #mine-stage {
+    position:fixed; top:0; left:0;
+    width:100%; height:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:28px;
+    text-align:center;
+    padding:0 30px;
+    opacity:0;
+    z-index:20;
+    pointer-events:none;
+    transition:opacity 1s ease;
+  }
+  #mine-stage.show {
+    opacity:1;
+  }
+
+  #mine-stage .mine-line {
+    color:#ffffff;
+    font-family:'Segoe UI', Arial, sans-serif;
+    font-size:clamp(20px, 4.6vw, 36px);
+    font-weight:600;
+    letter-spacing:0.5px;
+    max-width:900px;
+    opacity:0;
+    transform:translateY(18px);
+    transition:opacity 0.9s ease, transform 0.9s ease;
+  }
+  #mine-stage .mine-line.reveal {
+    opacity:1;
+    transform:translateY(0);
+  }
+  #mine-stage .mine-line.final {
+    color:#ff3c5a;
+    text-shadow:0 0 25px rgba(255,30,60,0.7);
+  }
+</style>
+</head>
+<body>
+
+<div class="blur"></div>
+<div id="heart-stage"><canvas id="heart-canvas"></canvas></div>
+<div id="vignette"></div>
+
+<div id="container">
+  <div id="text"></div>
+</div>
+<div id="hint">click anywhere to continue</div>
+
+<audio id="song" preload="auto" src="https://raw.githubusercontent.com/Muntasir-UwU/hgfd/a2c223df4e214802a6f4986d34db9165eb8c23cd/baby.mp3"></audio>
+
+<div id="lyrics-stage">
+  <div id="lyrics-block">
+    <div class="lyric-line">I'll make you happy, baby, just wait and see</div>
+    <div class="lyric-line">For every kiss you give me, I'll give you three</div>
+    <div class="lyric-line">Oh, since the day I saw you</div>
+    <div class="lyric-line">I have been waiting for you</div>
+    <div class="lyric-line">You know I will adore you 'til eternity</div>
+    <div class="lyric-line">So won't you, please<br>(be my, be my baby)</div>
+    <div class="lyric-line">Be my little baby?<br>(My one and only baby)</div>
+    <div class="lyric-line">Say you'll be my darlin'<br>(be my, be my baby)</div>
+    <div class="lyric-line">Be my baby now<br>(my one and only baby)</div>
+    <div class="lyric-line">Whoa-oh-oh-oh</div>
+  </div>
+</div>
+
+<div id="question-stage">
+  <div id="button-row">
+    <button id="yes-btn">Yes</button>
+    <button id="no-btn">No</button>
+  </div>
+</div>
+<div id="no-tooltip"></div>
+
+<div id="mine-stage">
+  <div class="mine-line" data-index="0">No it is not an option, you have to be mine</div>
+  <div class="mine-line" data-index="1">You are my addiction</div>
+  <div class="mine-line" data-index="2">I need my everyday dose of you</div>
+  <div class="mine-line final" data-index="3">SO YOU'RE MINE!!</div>
+</div>
+
+<script>
+/* =========================================================
+   HEART ANIMATION (background layer)
+   ========================================================= */
+const heartStage = document.getElementById('heart-stage');
+const canvas = document.getElementById('heart-canvas');
+const ctx = canvas.getContext('2d');
+
+let width = 0, height = 0, dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+function resize() {
+  width = window.innerWidth;
+  height = window.innerHeight;
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  canvas.style.width = width + 'px';
+  canvas.style.height = height + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+resize();
+window.addEventListener('resize', resize);
+
+function heartPath(context, cx, cy, w, h) {
+  const topCurveHeight = h * 0.32;
+  const x = cx, y = cy - h / 2;
+  context.beginPath();
+  context.moveTo(x, y + topCurveHeight);
+  context.bezierCurveTo(x, y, x - w / 2, y, x - w / 2, y + topCurveHeight);
+  context.bezierCurveTo(x - w / 2, y + (h + topCurveHeight) / 2, x, y + (h + topCurveHeight) / 2, x, y + h);
+  context.bezierCurveTo(x, y + (h + topCurveHeight) / 2, x + w / 2, y + (h + topCurveHeight) / 2, x + w / 2, y + topCurveHeight);
+  context.bezierCurveTo(x + w / 2, y, x, y, x, y + topCurveHeight);
+  context.closePath();
+}
+
+const particleCount = 70;
+const particles = [];
+for (let i = 0; i < particleCount; i++) {
+  particles.push({
+    x: Math.random(), y: Math.random(),
+    r: Math.random() * 1.6 + 0.4,
+    speed: Math.random() * 0.00006 + 0.00002,
+    drift: (Math.random() - 0.5) * 0.00004,
+    alpha: Math.random() * 0.35 + 0.08
+  });
+}
+
+// heart rate state machine: 'hidden' | 'normal' | 'peak'
+let heartMode = 'hidden';
+let currentBpm = 62;
+let targetBpm = 62;
+
+function setHeartMode(mode) {
+  heartMode = mode;
+  if (mode === 'normal') targetBpm = 68;   // calm, steady
+  if (mode === 'peak')   targetBpm = 170;  // rises rapidly, holds at peak
+}
+
+function revealHeart() {
+  heartStage.classList.add('visible');
+  setHeartMode('normal');
+}
+
+function hideHeart() {
+  setHeartMode('hidden');
+  heartStage.classList.remove('visible');
+  soundOn = false;
+}
+
+function beatCurve(x) {
+  const p1 = Math.exp(-Math.pow((x - 0.06) / 0.035, 2)) * 1.0;
+  const p2 = Math.exp(-Math.pow((x - 0.20) / 0.045, 2)) * 0.42;
+  return p1 + p2;
+}
+
+let audioCtx = null;
+let soundOn = true;
+
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+initAudio();
+
+function unlockAudio() {
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}
+window.addEventListener('click', unlockAudio);
+window.addEventListener('touchstart', unlockAudio);
+window.addEventListener('keydown', unlockAudio);
+
+function thump(freq, strength, duration) {
+  if (!audioCtx || !soundOn || heartMode === 'hidden') return;
+  const t0 = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(freq, t0);
+  osc.frequency.exponentialRampToValueAtTime(Math.max(freq * 0.55, 20), t0 + duration);
+
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.value = 260;
+
+  const gain = audioCtx.createGain();
+  gain.gain.setValueAtTime(0.0001, t0);
+  gain.gain.exponentialRampToValueAtTime(strength, t0 + 0.018);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+
+  osc.connect(filter).connect(gain).connect(audioCtx.destination);
+  osc.start(t0);
+  osc.stop(t0 + duration + 0.05);
+}
+
+function playLub() { thump(58, 0.9, 0.17); }
+function playDub() { thump(48, 0.45, 0.13); }
+
+let last = performance.now();
+let phaseAccum = 0;
+let prevBeatPhase = 0;
+let dubFired = false;
+
+function frame(now) {
+  requestAnimationFrame(frame);
+  const dt = Math.min((now - last) / 1000, 0.05);
+  last = now;
+
+  // ease current bpm toward target — faster ease when rising to peak
+  const k = heartMode === 'peak' ? 1.8 : 0.6;
+  currentBpm += (targetBpm - currentBpm) * (1 - Math.exp(-k * dt));
+
+  phaseAccum += (currentBpm / 60) * dt;
+  const beatPhase = phaseAccum % 1;
+  const curve = beatCurve(beatPhase);
+
+  if (beatPhase < prevBeatPhase) {
+    playLub();
+    dubFired = false;
+  }
+  if (!dubFired && beatPhase > 0.20) {
+    playDub();
+    dubFired = true;
+  }
+  prevBeatPhase = beatPhase;
+
+  ctx.clearRect(0, 0, width, height);
+
+  for (const p of particles) {
+    p.y -= p.speed;
+    p.x += p.drift;
+    if (p.y < -0.02) p.y = 1.02;
+    if (p.x < -0.02) p.x = 1.02;
+    if (p.x > 1.02) p.x = -0.02;
+    ctx.beginPath();
+    ctx.fillStyle = `rgba(120,20,35,${p.alpha})`;
+    ctx.arc(p.x * width, p.y * height, p.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  const cx = width / 2;
+  const cy = height / 2;
+  const baseSize = Math.min(width, height) * 0.34;
+  const scale = 1 + curve * 0.15;
+  const size = baseSize * scale;
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.shadowColor = 'rgba(255,30,60,0.9)';
+  ctx.shadowBlur = 55 + curve * 70;
+  heartPath(ctx, cx, cy, size, size);
+  ctx.fillStyle = `rgba(255,20,45,${0.16 + curve * 0.22})`;
+  ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  ctx.shadowColor = 'rgba(255,20,50,0.75)';
+  ctx.shadowBlur = 30 + curve * 40;
+  heartPath(ctx, cx, cy, size, size);
+  const grad = ctx.createRadialGradient(
+    cx - size * 0.12, cy - size * 0.18, size * 0.05,
+    cx, cy, size * 0.75
+  );
+  grad.addColorStop(0, `rgba(255,${110 + curve * 60},120,1)`);
+  grad.addColorStop(0.35, `rgba(255,30,55,1)`);
+  grad.addColorStop(1, `rgba(120,0,20,1)`);
+  ctx.fillStyle = grad;
+  ctx.fill();
+  ctx.restore();
+}
+requestAnimationFrame(frame);
+
+/* =========================================================
+   TYPEWRITER SEQUENCE
+   ========================================================= */
+const sentences = [
+  "You know what day it is?",
+  "It is August 1st 2026",
+  "Today is International Girlfriend Day",
+  "Will you be MY Girlfriend? "
+];
+
+const textEl = document.getElementById('text');
+const hintEl = document.getElementById('hint');
+const containerEl = document.getElementById('container');
+const lyricsStage = document.getElementById('lyrics-stage');
+const lyricsBlock = document.getElementById('lyrics-block');
+
+let index = 0;
+let charIndex = 0;
+let typingTimer = null;
+let state = "typing"; // typing | waiting | fading | final
+let finished = false;
+
+function typeSentence() {
+  state = "typing";
+  hintEl.classList.remove('show');
+  textEl.classList.remove('fade');
+  textEl.innerHTML = '<span id="typed"></span><span class="cursor">&nbsp;</span>';
+
+  // trigger heart cues as each relevant line begins typing
+  if (index === 1) revealHeart();
+  if (index === 2) setHeartMode('peak');
+
+  const typedSpan = document.getElementById('typed');
+  const sentence = sentences[index];
+  charIndex = 0;
+
+  function typeChar() {
+    if (charIndex < sentence.length) {
+      typedSpan.textContent += sentence.charAt(charIndex);
+      charIndex++;
+      typingTimer = setTimeout(typeChar, 55);
+    } else {
+      state = "waiting";
+      hintEl.classList.add('show');
+    }
+  }
+  typeChar();
+}
+
+function skipTyping() {
+  clearTimeout(typingTimer);
+  const typedSpan = document.getElementById('typed');
+  if (typedSpan) typedSpan.textContent = sentences[index];
+  state = "waiting";
+  hintEl.classList.add('show');
+}
+
+function nextSentence() {
+  if (index >= sentences.length - 1) {
+    goToFinalScene();
+    return;
+  }
+
+  state = "fading";
+  hintEl.classList.remove('show');
+  textEl.classList.add('fade');
+  setTimeout(() => {
+    index++;
+    typeSentence();
+  }, 800);
+}
+
+const songEl = document.getElementById('song');
+
+function fadeInSong(duration) {
+  songEl.volume = 0;
+  const start = performance.now();
+  function step(now) {
+    const t = Math.max(0, Math.min(1, (now - start) / duration));
+    songEl.volume = t;
+    if (t < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+const LYRICS_DURATION_MS = 53000;
+
+function goToFinalScene() {
+  state = "final";
+  finished = true;
+  hintEl.classList.remove('show');
+
+  // heart fades out
+  hideHeart();
+
+  // start the song right away, inside this click handler, so autoplay is allowed
+  songEl.volume = 0;
+  songEl.play().catch(() => {});
+  fadeInSong(2000);
+
+  // lyrics fade in and rise
+  setTimeout(() => {
+    lyricsStage.classList.add('show');
+    requestAnimationFrame(() => lyricsBlock.classList.add('play'));
+  }, 900);
+
+  // once the lyrics have finished rising, bring up the question scene
+  setTimeout(() => {
+    showQuestionStage();
+  }, 900 + LYRICS_DURATION_MS);
+}
+
+document.body.addEventListener('click', (e) => {
+  if (state === "typing") {
+    skipTyping();
+  } else if (state === "waiting") {
+    nextSentence();
+  }
+});
+
+typeSentence();
+
+/* =========================================================
+   YES / NO QUESTION SCENE
+   ========================================================= */
+const questionStage = document.getElementById('question-stage');
+const yesBtn = document.getElementById('yes-btn');
+const noBtn = document.getElementById('no-btn');
+const noTooltip = document.getElementById('no-tooltip');
+const mineStage = document.getElementById('mine-stage');
+const mineLines = document.querySelectorAll('.mine-line');
+
+let noClicks = 0;
+
+function showQuestionStage() {
+  questionStage.classList.add('show');
+}
+
+function hideQuestionStage() {
+  questionStage.classList.remove('show');
+}
+
+function randomSafeSpot(el) {
+  const rect = el.getBoundingClientRect();
+  const margin = 24;
+  const maxLeft = Math.max(margin, window.innerWidth - rect.width - margin);
+  const maxTop = Math.max(margin, window.innerHeight - rect.height - margin);
+  const left = margin + Math.random() * (maxLeft - margin);
+  const top = margin + Math.random() * (maxTop - margin);
+  return { left, top };
+}
+
+function evadeNoButton() {
+  const rect = noBtn.getBoundingClientRect();
+  if (!noBtn.classList.contains('evading')) {
+    // lock in current position first so the transform to "fixed" doesn't jump
+    noBtn.style.left = rect.left + 'px';
+    noBtn.style.top = rect.top + 'px';
+    noBtn.classList.add('evading');
+    // force reflow so the browser registers the starting position before animating
+    void noBtn.offsetWidth;
+  }
+  const spot = randomSafeSpot(noBtn);
+  noBtn.style.left = spot.left + 'px';
+  noBtn.style.top = spot.top + 'px';
+}
+
+function buildTooltipMarkup() {
+  const word = "Huhhhhhh?";
+  let html = '';
+  let size = 1;
+  for (let i = 0; i < word.length; i++) {
+    const ch = word[i];
+    if (ch.toLowerCase() === 'h' && i > 1) size += 0.4;
+    html += `<span style="font-size:${size}em; line-height:1;">${ch}</span>`;
+  }
+  return html;
+}
+
+function showTooltipNearButton() {
+  const rect = noBtn.getBoundingClientRect();
+  noTooltip.innerHTML = buildTooltipMarkup();
+  noTooltip.style.left = rect.left + 'px';
+  noTooltip.style.top = (rect.top - 56) + 'px';
+  noTooltip.classList.add('show');
+  clearTimeout(showTooltipNearButton._hideTimer);
+  showTooltipNearButton._hideTimer = setTimeout(() => {
+    noTooltip.classList.remove('show');
+  }, 2200);
+}
+
+function playMineSequence() {
+  hideQuestionStage();
+  noTooltip.classList.remove('show');
+
+  // hide the typewriter line while the "mine" lines play
+  containerEl.style.transition = 'opacity 0.8s ease';
+  containerEl.style.opacity = '0';
+
+  setTimeout(() => {
+    mineStage.classList.add('show');
+    mineLines.forEach((line, i) => {
+      setTimeout(() => {
+        line.classList.add('reveal');
+      }, 900 + i * 1600);
+    });
+
+    const totalDelay = 900 + mineLines.length * 1600 + 2400;
+    setTimeout(() => {
+      mineStage.classList.remove('show');
+      mineLines.forEach(line => line.classList.remove('reveal'));
+
+      // bring the typewriter line back
+      containerEl.style.opacity = '1';
+
+      setTimeout(() => {
+        resetNoButton();
+        showQuestionStage();
+      }, 1000);
+    }, totalDelay);
+  }, 900);
+}
+
+function resetNoButton() {
+  noClicks = 0;
+  noBtn.classList.remove('evading');
+  noBtn.style.left = '';
+  noBtn.style.top = '';
+}
+
+noBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  noClicks++;
+
+  if (noClicks === 1) {
+    evadeNoButton();
+  } else if (noClicks === 2) {
+    evadeNoButton();
+    showTooltipNearButton();
+  } else {
+    playMineSequence();
+  }
+});
+
+// if the "no" button has already run away, keep it dodging the cursor a little
+noBtn.addEventListener('mouseenter', () => {
+  if (noBtn.classList.contains('evading')) {
+    evadeNoButton();
+  }
+});
+
+yesBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  window.location.href = "https://raw.githubusercontent.com/Muntasir-UwU/hgfd/2791aec3aa7007266ddf9c775a80086999626540/love.html";
+});
+</script>
+
+</body>
+</html>
